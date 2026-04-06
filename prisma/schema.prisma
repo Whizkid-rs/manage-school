@@ -1,0 +1,229 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── AUTH ────────────────────────────────────────────────────────────────────
+
+enum Role {
+  ADMIN
+  PROFESSOR
+  STUDENT
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String
+  passwordHash String
+  role         Role      @default(STUDENT)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  professor Professor?
+  student   Student?
+  accounts  Account[]
+  sessions  Session[]
+}
+
+// NextAuth adapter tables
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─── PROFESSORS ──────────────────────────────────────────────────────────────
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+}
+
+model Professor {
+  id             String         @id @default(cuid())
+  userId         String         @unique
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phone          String?
+  bio            String?
+  hireDate       DateTime
+  employmentType EmploymentType @default(FULL_TIME)
+  department     String?
+  officeRoom     String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  courseAssignments CourseAssignment[]
+  timetableSlots    TimetableSlot[]
+}
+
+// ─── COURSES ─────────────────────────────────────────────────────────────────
+
+model Course {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  description String?
+  credits     Int      @default(3)
+  maxStudents Int      @default(30)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  prerequisites  Course[] @relation("CoursePrerequisites")
+  prerequisiteOf Course[] @relation("CoursePrerequisites")
+
+  assignments    CourseAssignment[]
+  enrollments    Enrollment[]
+  timetableSlots TimetableSlot[]
+}
+
+model CourseAssignment {
+  id          String    @id @default(cuid())
+  courseId    String
+  professorId String
+  course      Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  professor   Professor @relation(fields: [professorId], references: [id], onDelete: Cascade)
+  assignedAt  DateTime  @default(now())
+
+  @@unique([courseId, professorId])
+}
+
+// ─── STUDENTS ────────────────────────────────────────────────────────────────
+
+model Student {
+  id            String    @id @default(cuid())
+  userId        String    @unique
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  studentNumber String    @unique
+  grade         String?
+  dateOfBirth   DateTime?
+  guardianName  String?
+  guardianPhone String?
+  address       String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  enrollments Enrollment[]
+  payments    Payment[]
+}
+
+// ─── ENROLLMENTS ─────────────────────────────────────────────────────────────
+
+enum EnrollmentStatus {
+  ACTIVE
+  DROPPED
+  COMPLETED
+  PENDING
+}
+
+model Enrollment {
+  id         String           @id @default(cuid())
+  studentId  String
+  courseId   String
+  student    Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  course     Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  status     EnrollmentStatus @default(PENDING)
+  enrolledAt DateTime         @default(now())
+  grade      String?
+
+  @@unique([studentId, courseId])
+}
+
+// ─── TIMETABLE ───────────────────────────────────────────────────────────────
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+}
+
+model TimetableSlot {
+  id           String    @id @default(cuid())
+  courseId     String
+  professorId  String
+  room         String
+  dayOfWeek    DayOfWeek
+  startTime    String
+  endTime      String
+  academicYear String
+  semester     Int
+  course       Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  professor    Professor @relation(fields: [professorId], references: [id], onDelete: Cascade)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([room, dayOfWeek, startTime, academicYear, semester])
+  @@unique([professorId, dayOfWeek, startTime, academicYear, semester])
+}
+
+// ─── PAYMENTS ────────────────────────────────────────────────────────────────
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+  PARTIAL
+}
+
+enum PaymentType {
+  TUITION
+  REGISTRATION
+  EXAM_FEE
+  MATERIAL_FEE
+  OTHER
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  studentId     String
+  student       Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  type          PaymentType   @default(TUITION)
+  amount        Decimal       @db.Decimal(10, 2)
+  amountPaid    Decimal       @default(0) @db.Decimal(10, 2)
+  currency      String        @default("USD")
+  status        PaymentStatus @default(PENDING)
+  dueDate       DateTime
+  paidAt        DateTime?
+  description   String?
+  invoiceNumber String        @unique
+  notes         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
