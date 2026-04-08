@@ -6,45 +6,67 @@ import { buttonVariants } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { RoleGuard } from "@/components/layout/role-guard"
 import { OverdueBadge } from "@/components/payments/overdue-badge"
+import { SearchInput } from "@/components/ui/search-input"
 import { Plus } from "lucide-react"
 import { cn, formatDate, formatCurrency } from "@/lib/utils"
+import { Suspense } from "react"
 
 function computeStatus(status: string, dueDate: Date) {
   if (status === "PENDING" && new Date(dueDate) < new Date()) return "OVERDUE"
   return status
 }
 
-export default async function PaymentsPage() {
+export default async function PaymentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>
+}) {
+  const { q = "" } = await searchParams
   const session = await getServerSession(authOptions)
 
-  const where = session?.user.role === "STUDENT" && session.user.studentId
+  const roleWhere = session?.user.role === "STUDENT" && session.user.studentId
     ? { studentId: session.user.studentId }
     : {}
 
+  const searchWhere = q
+    ? {
+        OR: [
+          { invoiceNumber: { contains: q, mode: "insensitive" as const } },
+          { student: { user: { name: { contains: q, mode: "insensitive" as const } } } },
+        ],
+      }
+    : {}
+
   const payments = await prisma.payment.findMany({
-    where,
+    where: { ...roleWhere, ...searchWhere },
     include: { student: { include: { user: { select: { name: true } } } } },
     orderBy: { dueDate: "desc" },
   })
 
   const withStatus = payments.map((p) => ({ ...p, displayStatus: computeStatus(p.status, p.dueDate) }))
   const overdueCount = withStatus.filter((p) => p.displayStatus === "OVERDUE").length
+  const total = await prisma.payment.count({ where: roleWhere })
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h2 className="text-2xl font-bold">Payments</h2>
           <p className="text-muted-foreground text-sm">
-            {payments.length} total{overdueCount > 0 && ` · ${overdueCount} overdue`}
+            {total} total{overdueCount > 0 && ` · ${overdueCount} overdue`}
           </p>
         </div>
-        <RoleGuard roles={["ADMIN"]}>
-          <Link href="/payments/new" className={cn(buttonVariants(), "gap-2")}>
-            <Plus className="h-4 w-4" />
-            New Payment
-          </Link>
-        </RoleGuard>
+        <div className="flex items-center gap-3">
+          <Suspense>
+            <SearchInput placeholder="Search invoices..." />
+          </Suspense>
+          <RoleGuard roles={["ADMIN"]}>
+            <Link href="/payments/new" className={cn(buttonVariants(), "gap-2 shrink-0")}>
+              <Plus className="h-4 w-4" />
+              New Payment
+            </Link>
+          </RoleGuard>
+        </div>
       </div>
 
       <div className="rounded-md border bg-background">
@@ -65,7 +87,7 @@ export default async function PaymentsPage() {
             {withStatus.length === 0 && (
               <TableRow>
                 <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
-                  No payments yet.
+                  {q ? `No payments match "${q}".` : "No payments yet."}
                 </TableCell>
               </TableRow>
             )}

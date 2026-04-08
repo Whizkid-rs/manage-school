@@ -4,11 +4,27 @@ import { buttonVariants } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { RoleGuard } from "@/components/layout/role-guard"
+import { SearchInput } from "@/components/ui/search-input"
 import { Plus } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { Suspense } from "react"
 
-export default async function CoursesPage() {
+export default async function CoursesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>
+}) {
+  const { q = "" } = await searchParams
+
   const courses = await prisma.course.findMany({
+    where: q
+      ? {
+          OR: [
+            { code: { contains: q, mode: "insensitive" } },
+            { name: { contains: q, mode: "insensitive" } },
+          ],
+        }
+      : undefined,
     include: {
       assignments: { include: { professor: { include: { user: { select: { name: true } } } } } },
       _count: { select: { enrollments: { where: { status: "ACTIVE" } } } },
@@ -16,19 +32,26 @@ export default async function CoursesPage() {
     orderBy: { code: "asc" },
   })
 
+  const total = await prisma.course.count()
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h2 className="text-2xl font-bold">Courses</h2>
-          <p className="text-muted-foreground text-sm">{courses.length} total</p>
+          <p className="text-muted-foreground text-sm">{total} total</p>
         </div>
-        <RoleGuard roles={["ADMIN"]}>
-          <Link href="/courses/new" className={cn(buttonVariants(), "gap-2")}>
-            <Plus className="h-4 w-4" />
-            New Course
-          </Link>
-        </RoleGuard>
+        <div className="flex items-center gap-3">
+          <Suspense>
+            <SearchInput placeholder="Search courses..." />
+          </Suspense>
+          <RoleGuard roles={["ADMIN"]}>
+            <Link href="/courses/new" className={cn(buttonVariants(), "gap-2 shrink-0")}>
+              <Plus className="h-4 w-4" />
+              New Course
+            </Link>
+          </RoleGuard>
+        </div>
       </div>
 
       <div className="rounded-md border bg-background">
@@ -48,7 +71,7 @@ export default async function CoursesPage() {
             {courses.length === 0 && (
               <TableRow>
                 <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                  No courses yet.
+                  {q ? `No courses match "${q}".` : "No courses yet."}
                 </TableCell>
               </TableRow>
             )}

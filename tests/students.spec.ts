@@ -125,7 +125,7 @@ test.describe("Student detail page", () => {
   test("shows enrollments table", async ({ page }) => {
     const url = await getStudentUrl(page, "Alice Johnson")
     await page.goto(url)
-    await expect(page.getByText(/Enrollments/)).toBeVisible()
+    await expect(page.getByText(/Enrollments/).first()).toBeVisible()
   })
 
   test("shows Edit button for admin", async ({ page }) => {

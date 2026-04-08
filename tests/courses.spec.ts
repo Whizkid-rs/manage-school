@@ -126,7 +126,7 @@ test.describe("Course detail page — Admin", () => {
   test("shows enrolled students table", async ({ page }) => {
     const url = await getCourseUrl(page, "MATH101")
     await page.goto(url)
-    await expect(page.getByText(/Students/)).toBeVisible()
+    await expect(page.getByText(/Students \(/).first()).toBeVisible()
   })
 
   test("shows Enroll Student button for admin", async ({ page }) => {
