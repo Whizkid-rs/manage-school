@@ -10,6 +10,7 @@ import {
   Calendar,
   CreditCard,
   Users,
+  UsersRound,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -43,6 +44,12 @@ const navItems = [
     label: "Students",
     icon: Users,
     roles: ["ADMIN"],
+  },
+  {
+    href: "/groups",
+    label: "Groups",
+    icon: UsersRound,
+    roles: ["ADMIN", "STUDENT"],
   },
   {
     href: "/payments",

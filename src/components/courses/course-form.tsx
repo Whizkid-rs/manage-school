@@ -82,7 +82,7 @@ export function CourseForm({ defaultValues, courseId, allCourses, allProfessors 
             <Textarea id="description" {...register("description")} placeholder="Brief course description..." rows={3} />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="credits">Credits</Label>
               <Input id="credits" type="number" min={1} max={10} {...register("credits")} />
@@ -92,6 +92,11 @@ export function CourseForm({ defaultValues, courseId, allCourses, allProfessors 
               <Label htmlFor="maxStudents">Max Students</Label>
               <Input id="maxStudents" type="number" min={1} {...register("maxStudents")} />
               {errors.maxStudents && <p className="text-xs text-destructive">{errors.maxStudents.message}</p>}
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="pricePerMonth">Monthly Price (USD)</Label>
+              <Input id="pricePerMonth" type="number" min={0} step="0.01" placeholder="0.00" {...register("pricePerMonth")} />
+              {errors.pricePerMonth && <p className="text-xs text-destructive">{errors.pricePerMonth.message}</p>}
             </div>
           </div>
 

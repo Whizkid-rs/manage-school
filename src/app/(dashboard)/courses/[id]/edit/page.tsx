@@ -25,6 +25,7 @@ export default async function EditCoursePage({ params }: { params: Promise<{ id:
     description: course.description ?? undefined,
     credits: course.credits,
     maxStudents: course.maxStudents,
+    pricePerMonth: course.pricePerMonth ? Number(course.pricePerMonth) : undefined,
     isActive: course.isActive,
     prerequisiteIds: course.prerequisites.map((p) => p.id),
     professorIds: course.assignments.map((a) => a.professorId),

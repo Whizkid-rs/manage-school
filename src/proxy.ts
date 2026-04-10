@@ -16,6 +16,10 @@ export default withAuth(
       /^\/courses\/[^/]+\/edit/,
       /^\/payments\/new/,
       /^\/timetable\/manage/,
+      /^\/groups\/new/,
+      /^\/groups\/[^/]+\/edit/,
+      /^\/groups\/[^/]+\/add-member/,
+      /^\/groups\/[^/]+\/add-course/,
     ]
 
     if (adminOnlyPatterns.some((p) => p.test(pathname)) && role !== "ADMIN") {
@@ -52,5 +56,6 @@ export const config = {
     "/timetable/:path*",
     "/payments/:path*",
     "/students/:path*",
+    "/groups/:path*",
   ],
 }

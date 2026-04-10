@@ -34,7 +34,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   const parsed = courseSchema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues }, { status: 400 })
 
-  const { code, name, description, credits, maxStudents, isActive, prerequisiteIds, professorIds } = parsed.data
+  const { code, name, description, credits, maxStudents, pricePerMonth, isActive, prerequisiteIds, professorIds } = parsed.data
 
   const course = await prisma.$transaction(async (tx) => {
     const existing = await tx.course.findUnique({ where: { id } })
@@ -51,6 +51,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         description,
         credits,
         maxStudents,
+        pricePerMonth: pricePerMonth ?? null,
         isActive,
         prerequisites: { set: prerequisiteIds.map((pid) => ({ id: pid })) },
         assignments: { create: professorIds.map((professorId) => ({ professorId })) },

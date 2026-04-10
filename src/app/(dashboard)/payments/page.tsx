@@ -10,6 +10,7 @@ import { SearchInput } from "@/components/ui/search-input"
 import { Plus } from "lucide-react"
 import { cn, formatDate, formatCurrency } from "@/lib/utils"
 import { Suspense } from "react"
+import { GenerateInvoicesButton } from "@/components/payments/generate-invoices-button"
 
 function computeStatus(status: string, dueDate: Date) {
   if (status === "PENDING" && new Date(dueDate) < new Date()) return "OVERDUE"
@@ -60,6 +61,9 @@ export default async function PaymentsPage({
           <Suspense>
             <SearchInput placeholder="Search invoices..." />
           </Suspense>
+          <RoleGuard roles={["ADMIN"]}>
+            <GenerateInvoicesButton />
+          </RoleGuard>
           <RoleGuard roles={["ADMIN"]}>
             <Link href="/payments/new" className={cn(buttonVariants(), "gap-2 shrink-0")}>
               <Plus className="h-4 w-4" />

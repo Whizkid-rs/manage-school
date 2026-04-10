@@ -80,7 +80,7 @@ async function main() {
   // ─── COURSES ─────────────────────────────────────────────────────────────
   const mathCourse = await prisma.course.upsert({
     where: { code: "MATH101" },
-    update: {},
+    update: { pricePerMonth: 500 },
     create: {
       code: "MATH101",
       name: "Introduction to Calculus",
@@ -88,12 +88,13 @@ async function main() {
       credits: 4,
       maxStudents: 30,
       isActive: true,
+      pricePerMonth: 500,
     },
   })
 
   const physicsCourse = await prisma.course.upsert({
     where: { code: "PHYS101" },
-    update: {},
+    update: { pricePerMonth: 450 },
     create: {
       code: "PHYS101",
       name: "General Physics I",
@@ -101,12 +102,13 @@ async function main() {
       credits: 4,
       maxStudents: 25,
       isActive: true,
+      pricePerMonth: 450,
     },
   })
 
   const algCourse = await prisma.course.upsert({
     where: { code: "MATH201" },
-    update: {},
+    update: { pricePerMonth: 550 },
     create: {
       code: "MATH201",
       name: "Linear Algebra",
@@ -114,6 +116,7 @@ async function main() {
       credits: 3,
       maxStudents: 30,
       isActive: true,
+      pricePerMonth: 550,
       prerequisites: { connect: [{ id: mathCourse.id }] },
     },
   })
@@ -227,6 +230,60 @@ async function main() {
         paidAt: p.paidAt ?? null,
         description: "Semester 1 Tuition Fee",
       },
+    })
+  }
+
+  // ─── GROUPS ──────────────────────────────────────────────────────────────
+  const group10A = await prisma.group.upsert({
+    where: { id: "seed-group-10a" },
+    update: {},
+    create: {
+      id: "seed-group-10a",
+      name: "Class 10A",
+      description: "First year class A",
+      academicYear: "2025-2026",
+    },
+  })
+
+  const group11B = await prisma.group.upsert({
+    where: { id: "seed-group-11b" },
+    update: {},
+    create: {
+      id: "seed-group-11b",
+      name: "Class 11B",
+      description: "Second year class B",
+      academicYear: "2025-2026",
+    },
+  })
+
+  // Group memberships: Alice (0), Bob (1), Eve (4) → 10A; Carol (2), David (3) → 11B
+  const memberships = [
+    { groupId: group10A.id, studentId: students[0].id },
+    { groupId: group10A.id, studentId: students[1].id },
+    { groupId: group10A.id, studentId: students[4].id },
+    { groupId: group11B.id, studentId: students[2].id },
+    { groupId: group11B.id, studentId: students[3].id },
+  ]
+  for (const m of memberships) {
+    await prisma.groupMembership.upsert({
+      where: { groupId_studentId: { groupId: m.groupId, studentId: m.studentId } },
+      update: {},
+      create: m,
+    })
+  }
+
+  // Group courses: 10A → MATH101 (Smith), PHYS101 (Garcia); 11B → PHYS101 (Garcia), MATH201 (Smith)
+  const groupCourses = [
+    { groupId: group10A.id, courseId: mathCourse.id, professorId: prof1.id },
+    { groupId: group10A.id, courseId: physicsCourse.id, professorId: prof2.id },
+    { groupId: group11B.id, courseId: physicsCourse.id, professorId: prof2.id },
+    { groupId: group11B.id, courseId: algCourse.id, professorId: prof1.id },
+  ]
+  for (const gc of groupCourses) {
+    await prisma.groupCourse.upsert({
+      where: { groupId_courseId: { groupId: gc.groupId, courseId: gc.courseId } },
+      update: {},
+      create: gc,
     })
   }
 

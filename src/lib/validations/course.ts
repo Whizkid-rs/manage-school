@@ -6,6 +6,7 @@ export const courseSchema = z.object({
   description: z.string().optional(),
   credits: z.coerce.number().int().min(1).max(10),
   maxStudents: z.coerce.number().int().min(1).max(500),
+  pricePerMonth: z.coerce.number().min(0).optional(),
   isActive: z.boolean().default(true),
   prerequisiteIds: z.array(z.string()).default([]),
   professorIds: z.array(z.string()).default([]),
@@ -21,6 +22,7 @@ export type CourseFormData = {
   description?: string
   credits: number
   maxStudents: number
+  pricePerMonth?: number
   isActive: boolean
   prerequisiteIds: string[]
   professorIds: string[]

@@ -23,7 +23,11 @@ export default async function DashboardPage() {
 
   // ─── ADMIN ────────────────────────────────────────────────────────────────
   if (role === "ADMIN") {
-    const [professorCount, courseCount, studentCount, pendingPayments] = await Promise.all([
+    const now = new Date()
+    const currentMonth = now.getMonth() + 1
+    const currentYear = now.getFullYear()
+
+    const [professorCount, courseCount, studentCount, pendingPayments, groups] = await Promise.all([
       prisma.professor.count(),
       prisma.course.count({ where: { isActive: true } }),
       prisma.student.count(),
@@ -33,7 +37,29 @@ export default async function DashboardPage() {
         orderBy: { dueDate: "asc" },
         take: 5,
       }),
+      prisma.group.findMany({
+        include: {
+          memberships: { select: { studentId: true } },
+        },
+        orderBy: { name: "asc" },
+      }),
     ])
+
+    // Per-group payment status for current month
+    const groupMemberIds = groups.map((g) => g.memberships.map((m) => m.studentId)).flat()
+    const currentMonthPayments = await prisma.payment.findMany({
+      where: {
+        billingMonth: currentMonth,
+        billingYear: currentYear,
+        studentId: { in: groupMemberIds },
+      },
+      select: { studentId: true, status: true, dueDate: true },
+    })
+    const paidStudentIds = new Set(
+      currentMonthPayments
+        .filter((p) => computeStatus(p.status, p.dueDate) === "PAID")
+        .map((p) => p.studentId)
+    )
 
     const overdueCount = pendingPayments.filter(
       (p) => computeStatus(p.status, p.dueDate) === "OVERDUE",
@@ -68,6 +94,47 @@ export default async function DashboardPage() {
             </Card>
           ))}
         </div>
+
+        {groups.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">
+                Group Payment Status — {new Date(currentYear, currentMonth - 1).toLocaleString("en-US", { month: "long", year: "numeric" })}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Group</TableHead>
+                    <TableHead>Members</TableHead>
+                    <TableHead>Paid</TableHead>
+                    <TableHead>Outstanding</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {groups.map((g) => {
+                    const total = g.memberships.length
+                    const paid = g.memberships.filter((m) => paidStudentIds.has(m.studentId)).length
+                    const outstanding = total - paid
+                    return (
+                      <TableRow key={g.id}>
+                        <TableCell className="font-medium">
+                          <Link href={`/groups/${g.id}`} className="hover:underline">{g.name}</Link>
+                        </TableCell>
+                        <TableCell>{total}</TableCell>
+                        <TableCell className="text-green-600 font-medium">{paid}</TableCell>
+                        <TableCell className={outstanding > 0 ? "text-destructive font-medium" : "text-muted-foreground"}>
+                          {outstanding}
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
 
         {pendingPayments.length > 0 && (
           <Card>

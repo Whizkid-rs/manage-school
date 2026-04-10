@@ -28,7 +28,7 @@ export async function POST(req: Request) {
   const parsed = courseSchema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues }, { status: 400 })
 
-  const { code, name, description, credits, maxStudents, isActive, prerequisiteIds, professorIds } = parsed.data
+  const { code, name, description, credits, maxStudents, pricePerMonth, isActive, prerequisiteIds, professorIds } = parsed.data
 
   const existing = await prisma.course.findUnique({ where: { code } })
   if (existing) return NextResponse.json({ error: "Course code already in use" }, { status: 409 })
@@ -40,6 +40,7 @@ export async function POST(req: Request) {
       description,
       credits,
       maxStudents,
+      pricePerMonth: pricePerMonth ?? null,
       isActive,
       prerequisites: { connect: prerequisiteIds.map((id) => ({ id })) },
       assignments: {

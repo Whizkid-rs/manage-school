@@ -87,20 +87,22 @@ model Professor {
 
   courseAssignments CourseAssignment[]
   timetableSlots    TimetableSlot[]
+  groupCourses      GroupCourse[]
 }
 
 // ─── COURSES ─────────────────────────────────────────────────────────────────
 
 model Course {
-  id          String   @id @default(cuid())
-  code        String   @unique
-  name        String
-  description String?
-  credits     Int      @default(3)
-  maxStudents Int      @default(30)
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String   @id @default(cuid())
+  code          String   @unique
+  name          String
+  description   String?
+  credits       Int      @default(3)
+  maxStudents   Int      @default(30)
+  isActive      Boolean  @default(true)
+  pricePerMonth Decimal? @db.Decimal(10, 2)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   prerequisites  Course[] @relation("CoursePrerequisites")
   prerequisiteOf Course[] @relation("CoursePrerequisites")
@@ -108,6 +110,7 @@ model Course {
   assignments    CourseAssignment[]
   enrollments    Enrollment[]
   timetableSlots TimetableSlot[]
+  groupCourses   GroupCourse[]
 }
 
 model CourseAssignment {
@@ -136,8 +139,9 @@ model Student {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  enrollments Enrollment[]
-  payments    Payment[]
+  enrollments      Enrollment[]
+  payments         Payment[]
+  groupMemberships GroupMembership[]
 }
 
 // ─── ENROLLMENTS ─────────────────────────────────────────────────────────────
@@ -224,6 +228,46 @@ model Payment {
   description   String?
   invoiceNumber String        @unique
   notes         String?
+  billingMonth  Int?
+  billingYear   Int?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
+}
+
+// ─── GROUPS ──────────────────────────────────────────────────────────────────
+
+model Group {
+  id           String   @id @default(cuid())
+  name         String
+  description  String?
+  academicYear String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  memberships GroupMembership[]
+  courses     GroupCourse[]
+}
+
+model GroupMembership {
+  id        String   @id @default(cuid())
+  groupId   String
+  studentId String
+  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  joinedAt  DateTime @default(now())
+
+  @@unique([groupId, studentId])
+}
+
+model GroupCourse {
+  id          String    @id @default(cuid())
+  groupId     String
+  courseId    String
+  professorId String
+  group       Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  course      Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  professor   Professor @relation(fields: [professorId], references: [id], onDelete: Cascade)
+  assignedAt  DateTime  @default(now())
+
+  @@unique([groupId, courseId])
 }
