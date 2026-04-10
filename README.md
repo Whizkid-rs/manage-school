@@ -1,36 +1,133 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# School Manager
 
-## Getting Started
+Private school management web app for administrators, professors, and students. Role-based access to professors, courses, student records, and payments.
 
-First, run the development server:
+## Tech Stack
+
+| Layer | Choice |
+|-------|--------|
+| Framework | Next.js 16 (App Router, TypeScript) |
+| Database | PostgreSQL via Prisma 7 (Neon serverless) |
+| Auth | NextAuth v4 — JWT + CredentialsProvider |
+| UI | Tailwind CSS + shadcn/ui |
+| Validation | Zod v4 + react-hook-form |
+| Tests | Playwright |
+
+## Prerequisites
+
+- Node 20 (`nvm use 20`)
+- A PostgreSQL database — [Neon](https://neon.tech) free tier works
+
+## Setup
+
+```bash
+# 1. Install dependencies
+npm install
+
+# 2. Create .env.local
+cp .env.local.example .env.local   # or create manually
+```
+
+`.env.local` needs:
+
+```env
+DATABASE_URL=postgresql://...      # Neon connection string (use ?sslmode=require)
+NEXTAUTH_SECRET=any-random-string
+NEXTAUTH_URL=http://localhost:3000
+```
+
+```bash
+# 3. Run migrations
+npx prisma migrate dev
+
+# 4. Seed the database
+npx prisma db seed
+```
+
+## Running
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000). You'll be redirected to `/login`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Seed Credentials
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Role | Email | Password |
+|------|-------|----------|
+| Admin | admin@school.com | admin123 |
+| Professor | john.smith@school.com | prof123 |
+| Professor | maria.garcia@school.com | prof123 |
+| Student | alice@student.com | student123 |
+| Student | bob@student.com | student123 |
+| Student | carol@student.com | student123 |
+| Student | david@student.com | student123 |
+| Student | eve@student.com | student123 |
 
-## Learn More
+## Running Tests
 
-To learn more about Next.js, take a look at the following resources:
+The Playwright test suite spins up the dev server automatically:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npx playwright test
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+To run a specific spec:
 
-## Deploy on Vercel
+```bash
+npx playwright test tests/payments.spec.ts
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Tests use stored auth states in `tests/fixtures/` (generated on first run by `tests/auth.setup.ts`). The database must be seeded before running tests.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Module Access by Role
+
+| Module | Admin | Professor | Student |
+|--------|-------|-----------|---------|
+| Dashboard | KPI cards + overdue invoices | Assigned courses | Active courses + balance |
+| Professors | Full CRUD | View own profile | — |
+| Courses | Full CRUD + enroll/drop | View assigned | View enrolled |
+| Payments | Full CRUD | — (blocked) | View own |
+| Students | Full CRUD | View list | — |
+
+## Project Structure
+
+```
+├── prisma/
+│   ├── schema.prisma          # All models: User, Professor, Course, Student, Payment, Enrollment
+│   └── seed.ts                # Dev seed data (2 professors, 3 courses, 5 students, 5 invoices)
+├── src/
+│   ├── app/
+│   │   ├── (auth)/login/      # Login page
+│   │   ├── (dashboard)/       # All protected routes
+│   │   │   ├── layout.tsx     # Sidebar + TopNav shell
+│   │   │   ├── dashboard/     # Role-aware home page
+│   │   │   ├── professors/    # List, new, detail, edit
+│   │   │   ├── courses/       # List, new, detail, edit, enroll
+│   │   │   ├── students/      # List, new, detail, edit
+│   │   │   └── payments/      # List, new, detail
+│   │   └── api/               # REST handlers (auth + all modules)
+│   ├── components/
+│   │   ├── layout/            # Sidebar, TopNav, RoleGuard
+│   │   ├── payments/          # OverdueBadge, PaymentActions
+│   │   └── ui/                # shadcn/ui + SearchInput
+│   ├── lib/
+│   │   ├── prisma.ts          # Prisma client singleton (pg adapter)
+│   │   ├── auth.ts            # NextAuth config
+│   │   └── utils.ts           # cn(), formatCurrency(), formatDate()
+│   ├── proxy.ts               # Route protection middleware (renamed from middleware.ts in Next.js 16)
+│   └── types/next-auth.d.ts   # Augmented session with role, professorId, studentId
+└── tests/
+    ├── auth.setup.ts          # Generates fixture storage states
+    ├── fixtures/              # Saved auth sessions per role
+    └── *.spec.ts              # One spec file per module
+```
+
+## Key Behaviours
+
+- **OVERDUE** is computed on-read: a `PENDING` payment past its `dueDate` displays as OVERDUE. The database always stores the raw status.
+- **Invoice numbers** are auto-generated on creation: `INV-YYYYMMDD-XXXX`.
+- **Professors** cannot access the payments module at all (middleware redirect).
+- **Students** see only their own payments and are blocked from the students admin list.
+- Search on list pages is server-side via `searchParams` — no client-side filtering.
