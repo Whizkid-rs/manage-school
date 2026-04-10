@@ -85,18 +85,20 @@ Tests use stored auth states in `tests/fixtures/` (generated on first run by `te
 
 | Module | Admin | Professor | Student |
 |--------|-------|-----------|---------|
-| Dashboard | KPI cards + overdue invoices | Assigned courses | Active courses + balance |
+| Dashboard | KPI cards + group payment status + overdue invoices | Assigned courses | Active courses + balance |
 | Professors | Full CRUD | View own profile | — |
 | Courses | Full CRUD + enroll/drop | View assigned | View enrolled |
-| Payments | Full CRUD | — (blocked) | View own |
-| Students | Full CRUD | View list | — |
+| Groups | Full CRUD + members + courses | — | View own group |
+| Payments | Full CRUD + generate monthly invoices | — (blocked) | View own |
+| Students | Full CRUD | — | — |
 
 ## Project Structure
 
 ```
+├── features/                  # Module documentation + ERD
 ├── prisma/
-│   ├── schema.prisma          # All models: User, Professor, Course, Student, Payment, Enrollment
-│   └── seed.ts                # Dev seed data (2 professors, 3 courses, 5 students, 5 invoices)
+│   ├── schema.prisma          # All models: User, Professor, Course, Student, Group, Payment, Enrollment, …
+│   └── seed.ts                # Dev seed data (2 professors, 3 courses, 2 groups, 5 students, 5 invoices)
 ├── src/
 │   ├── app/
 │   │   ├── (auth)/login/      # Login page
@@ -105,12 +107,16 @@ Tests use stored auth states in `tests/fixtures/` (generated on first run by `te
 │   │   │   ├── dashboard/     # Role-aware home page
 │   │   │   ├── professors/    # List, new, detail, edit
 │   │   │   ├── courses/       # List, new, detail, edit, enroll
+│   │   │   ├── groups/        # List, new, detail, edit, add-member, add-course
 │   │   │   ├── students/      # List, new, detail, edit
 │   │   │   └── payments/      # List, new, detail
 │   │   └── api/               # REST handlers (auth + all modules)
+│   │       ├── groups/        # CRUD + /members + /courses sub-routes
+│   │       └── invoices/generate/  # Monthly invoice generation
 │   ├── components/
 │   │   ├── layout/            # Sidebar, TopNav, RoleGuard
-│   │   ├── payments/          # OverdueBadge, PaymentActions
+│   │   ├── groups/            # RemoveMemberButton, RemoveCourseButton
+│   │   ├── payments/          # OverdueBadge, GenerateInvoicesButton
 │   │   └── ui/                # shadcn/ui + SearchInput
 │   ├── lib/
 │   │   ├── prisma.ts          # Prisma client singleton (pg adapter)

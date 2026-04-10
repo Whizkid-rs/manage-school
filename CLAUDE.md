@@ -91,13 +91,16 @@ This helper runs in both API routes and page server components.
 
 ## Role-based access summary
 
-| Module    | ADMIN       | PROFESSOR        | STUDENT          |
-|-----------|-------------|------------------|------------------|
-| Dashboard | Full KPIs   | Own courses      | Own courses+pay  |
-| Professors| CRUD        | Own profile only | —                |
-| Courses   | CRUD+enroll | Assigned courses | Enrolled courses |
-| Payments  | CRUD all    | Blocked          | Own only         |
-| Students  | CRUD        | —                | Own profile      |
+| Module     | ADMIN             | PROFESSOR        | STUDENT            |
+|------------|-------------------|------------------|--------------------|
+| Dashboard  | Full KPIs         | Own courses      | Own courses+pay    |
+| Professors | CRUD              | Own profile only | —                  |
+| Courses    | CRUD+enroll       | Assigned courses | Enrolled courses   |
+| Groups     | CRUD+members      | —                | Own group (read)   |
+| Payments   | CRUD all          | Blocked          | Own only           |
+| Students   | CRUD              | —                | Own profile        |
+
+See `features/` for per-module documentation and `features/ERD.md` for the full entity relationship diagram.
 
 ---
 
@@ -132,7 +135,10 @@ Seed invoices: `INV-2025-0001` (Alice, PAID), `INV-2025-0002` (Bob, PENDING→OV
 - [x] Auth (login, JWT, role guards)
 - [x] Layout shell (Sidebar, TopNav, RoleGuard)
 - [x] Professors module (CRUD + Playwright tests)
-- [x] Courses module (CRUD, prerequisites, enrollments + Playwright tests)
+- [x] Courses module (CRUD, prerequisites, enrollments, monthly pricing + Playwright tests)
 - [x] Students module (CRUD + Playwright tests)
 - [x] Payments module (CRUD, OVERDUE detection + Playwright tests)
-- [ ] Phase 9 Polish (dashboard role content, search/filter, loading states)
+- [x] Groups module (CRUD, member management, course assignment)
+- [x] Monthly invoice generation (consolidated per student via group memberships)
+- [x] Dashboard role content (KPIs, group payment status, professor schedule, student overview)
+- [x] Search/filter on all list pages (server-side via searchParams)
